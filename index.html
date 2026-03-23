@@ -1,71 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web AR Video Card</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple AR Video</title>
 </head>
 
 <body>
 
 <a-scene 
-    mindar-image="imageTargetSrc: ./targets.mind" 
-    vr-mode-ui="enabled:false" 
-    device-orientation-permission-ui="enabled:false"
+  mindar-image="imageTargetSrc: targets.mind"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false"
 >
 
-    <a-assets>
-        <video 
-            id="cardVideo" 
-            src="./LOQ.mp4"
-            preload="auto"
-            loop
-            muted
-            autoplay
-            playsinline
-            webkit-playsinline
-            crossorigin="anonymous">
-        </video>
-    </a-assets>
+  <a-assets>
+    <video 
+      id="vid"
+      src="LOQ.mp4"
+      loop
+      muted
+      playsinline
+      webkit-playsinline>
+    </video>
+  </a-assets>
 
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <a-entity mindar-image-target="targetIndex: 0">
-        <a-video 
-            src="#cardVideo" 
-            width="1" 
-            height="0.55"
-            position="0 0 0">
-        </a-video>
-    </a-entity>
+  <a-entity mindar-image-target="targetIndex: 0">
+    <a-video src="#vid" width="1" height="0.6"></a-video>
+  </a-entity>
 
 </a-scene>
 
 <script>
-const targetEntity = document.querySelector('[mindar-image-target]');
-const video = document.querySelector('#cardVideo');
+const video = document.querySelector("#vid");
+const target = document.querySelector("[mindar-image-target]");
 
-// Ensure video is loaded
-video.load();
-
-// Play when target found
-targetEntity.addEventListener("targetFound", () => {
-    video.play().catch(err => {
-        console.log("Autoplay blocked:", err);
-    });
+// Play when image is detected
+target.addEventListener("targetFound", () => {
+  video.play();
 });
 
 // Pause when lost
-targetEntity.addEventListener("targetLost", () => {
-    video.pause();
+target.addEventListener("targetLost", () => {
+  video.pause();
 });
 
-// 🔥 IMPORTANT: Mobile fix (user interaction required)
-document.body.addEventListener('click', () => {
-    video.play().catch(() => {});
+// Mobile fix (tap once anywhere)
+document.body.addEventListener("click", () => {
+  video.play();
 }, { once: true });
 
 </script>
