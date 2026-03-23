@@ -1,43 +1,74 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web AR Video Card</title>
 </head>
 
 <body>
-    <a-scene mindar-image="imageTargetSrc: ./targets.mind" vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
-        <a-assets>
-            <video id="cardVideo" src="./LOQ!.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline></video>
-        </a-assets>
 
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+<a-scene 
+    mindar-image="imageTargetSrc: ./targets.mind" 
+    vr-mode-ui="enabled:false" 
+    device-orientation-permission-ui="enabled:false"
+>
 
-        <a-entity mindar-image-target="targetIndex: 0">
-            <a-video src="#cardVideo" width="1" height="0.55" rotation="0 0 0" position="0 0 0"></a-video>
-        </a-entity>
-    </a-scene>
+    <a-assets>
+        <video 
+            id="cardVideo" 
+            src="./LOQ!.mp4"
+            preload="auto"
+            loop
+            muted
+            autoplay
+            playsinline
+            webkit-playsinline
+            crossorigin="anonymous">
+        </video>
+    </a-assets>
 
-    <script>
-        // 3. Logic to play/pause video when the target is found/lost
-        const sceneEl = document.querySelector('a-scene');
-        const targetEntity = document.querySelector('[mindar-image-target]');
-        const video = document.querySelector('#cardVideo');
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        targetEntity.addEventListener("targetFound", event => {
-            video.play();
-        });
+    <a-entity mindar-image-target="targetIndex: 0">
+        <a-video 
+            src="#cardVideo" 
+            width="1" 
+            height="0.55"
+            position="0 0 0">
+        </a-video>
+    </a-entity>
 
-        targetEntity.addEventListener("targetLost", event => {
-            video.pause();
-        });
-    </script>
+</a-scene>
+
+<script>
+const targetEntity = document.querySelector('[mindar-image-target]');
+const video = document.querySelector('#cardVideo');
+
+// Ensure video is loaded
+video.load();
+
+// Play when target found
+targetEntity.addEventListener("targetFound", () => {
+    video.play().catch(err => {
+        console.log("Autoplay blocked:", err);
+    });
+});
+
+// Pause when lost
+targetEntity.addEventListener("targetLost", () => {
+    video.pause();
+});
+
+// 🔥 IMPORTANT: Mobile fix (user interaction required)
+document.body.addEventListener('click', () => {
+    video.play().catch(() => {});
+}, { once: true });
+
+</script>
+
 </body>
-
 </html>
