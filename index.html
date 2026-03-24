@@ -15,39 +15,31 @@
       font-family: Arial, sans-serif;
     }
 
-    #tapUI {
+    /* 🔊 Unmute Button */
+    #unmuteBtn {
       position: fixed;
-      bottom: 20px;
-      width: 100%;
-      text-align: center;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: black;
       color: white;
-      font-size: 18px;
-      background: rgba(0,0,0,0.6);
-      padding: 12px;
-      z-index: 10;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 16px;
+      z-index: 9999;
+      pointer-events: auto;
+      cursor: pointer;
     }
-    
-#unmuteBtn {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: rgba(0,0,0,0.7);
-  color: white;
-  padding: 10px 15px;
-  border-radius: 8px;
-  font-size: 16px;
-  z-index: 10;
-  cursor: pointer;
-}
-
   </style>
 </head>
 
 <body>
 
-<div id="unmuteBtn">🔊 Unmute</div>
+<!-- 🔊 Button -->
+<div id="unmuteBtn">🔊 Tap for Sound</div>
 
 <a-scene 
+  embedded
   mindar-image="
     imageTargetSrc: targets.mind;
     filterMinCF: 0.0005;
@@ -61,12 +53,13 @@
   device-orientation-permission-ui="enabled: false"
 >
 
- 
+  <!-- Assets -->
   <a-assets>
     <video 
       id="vid"
       src="LOQ.mp4"
       loop
+      muted
       playsinline
       webkit-playsinline
       crossorigin="anonymous">
@@ -76,13 +69,12 @@
   <!-- Camera -->
   <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-  <!-- Target Anchor -->
+  <!-- Target -->
   <a-entity id="anchor" mindar-image-target="targetIndex: 0">
 
-    <!-- Smooth Container -->
-    <a-entity id="smoothContainer" position="0 0 0">
+    <!-- Smooth container -->
+    <a-entity id="smoothContainer">
 
-      <!-- Video Plane -->
       <a-video 
         id="videoPlane"
         src="#vid"
@@ -101,57 +93,48 @@
 
 <script>
 const video = document.querySelector("#vid");
+const btn = document.querySelector("#unmuteBtn");
 const anchor = document.querySelector("#anchor");
 const container = document.querySelector("#smoothContainer");
 const plane = document.querySelector("#videoPlane");
-const tapUI = document.querySelector("#tapUI");
-const unmuteBtn = document.querySelector("#unmuteBtn");
-let visible = false;
 
-  // 🔊 Unmute button
-unmuteBtn.addEventListener("click", () => {
+let visible = false;
+let unlocked = false;
+
+// 🔊 UNMUTE BUTTON
+btn.addEventListener("click", () => {
   video.muted = false;
 
   video.play().then(() => {
-    console.log("Audio enabled ✅");
-    unmuteBtn.style.display = "none";
-  }).catch(err => {
-    console.log("Error:", err);
-  });
+    unlocked = true;
+    btn.innerText = "🔊 Sound ON";
+    setTimeout(() => btn.style.display = "none", 1500);
+  }).catch(err => console.log(err));
 });
 
-  
-//tap audio
-document.body.addEventListener("click", () => {
-  video.play().catch(()=>{});
-  tapUI.style.display = "none";
-}, { once: true });
-
-// target
+// 🎯 TARGET FOUND
 anchor.addEventListener("targetFound", () => {
   visible = true;
 
   video.play().catch(()=>{});
 
-  // Smooth fade in
   plane.setAttribute("animation__fade", 
-    "property: opacity; to: 1; dur: 400; easing: easeOutQuad");
+    "property: opacity; to: 1; dur: 400");
 
   plane.setAttribute("animation__scale", 
-    "property: scale; to: 1 1 1; dur: 400; easing: easeOutBack");
+    "property: scale; to: 1 1 1; dur: 400");
 });
 
-// target lost
+// ❌ TARGET LOST
 anchor.addEventListener("targetLost", () => {
   visible = false;
-
   video.pause();
 
   plane.setAttribute("animation__fade", 
-    "property: opacity; to: 0; dur: 300; easing: easeInQuad");
+    "property: opacity; to: 0; dur: 300");
 });
 
-//Position smoothing (LERP)
+// 🔥 SMOOTH TRACKING (PRO LEVEL)
 let lastPos = {x:0, y:0, z:0};
 
 function smoothTracking() {
