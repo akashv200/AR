@@ -34,13 +34,13 @@
 <!-- 🔊 Audio Unlock UI -->
 <div id="tapUI">Tap anywhere to enable audio 🔊</div>
 
-<a-scene 
+<a-scene
   mindar-image="
     imageTargetSrc: targets.mind;
-    filterMinCF: 0.0005;
-    filterBeta: 0.003;
-    warmupTolerance: 8;
-    missTolerance: 8;
+    filterMinCF: 0.001;
+    filterBeta: 0.001;
+    warmupTolerance: 5;
+    missTolerance: 20;
   "
   color-space="sRGB"
   renderer="colorManagement: true, physicallyCorrectLights"
@@ -50,7 +50,7 @@
 
   <!-- Assets -->
   <a-assets>
-    <video 
+    <video
       id="vid"
       src="LOQ.mp4"
       loop
@@ -70,7 +70,7 @@
     <a-entity id="smoothContainer" position="0 0 0">
 
       <!-- Video Plane -->
-      <a-video 
+      <a-video
         id="videoPlane"
         src="#vid"
         width="1"
@@ -94,20 +94,93 @@ const plane = document.querySelector("#videoPlane");
 const tapUI = document.querySelector("#tapUI");
 
 let visible = false;
+let lostTimer = null;
 
-// 🔊 Enable audio on first tap
+// ─── Smoothed state ────────────────────────────────────────────────────────
+const smoothPos = new THREE.Vector3(0, 0, 0);
+const smoothQuat = new THREE.Quaternion();
+const smoothQuat2 = new THREE.Quaternion(); // target each frame
+
+// Tuning knobs
+const POS_LERP   = 0.08;   // lower = smoother but more lag  (0.05–0.15)
+const ROT_SLERP  = 0.10;   // same for rotation
+const DEADZONE   = 0.0008; // ignore position jitter below this (metres)
+const GRACE_MS   = 600;    // ms to wait before hiding on target loss
+
+// ─── Audio unlock ──────────────────────────────────────────────────────────
 document.body.addEventListener("click", () => {
-  video.play().catch(()=>{});
+  video.play().catch(() => {});
   tapUI.style.display = "none";
 }, { once: true });
 
-// 🎯 When target is found
+// ─── Target found ──────────────────────────────────────────────────────────
 anchor.addEventListener("targetFound", () => {
+  // Cancel any pending hide
+  if (lostTimer) { clearTimeout(lostTimer); lostTimer = null; }
+
   visible = true;
+  video.play().catch(() => {});
 
-  video.play().catch(()=>{});
+  // Snap smoothed state to current pose to avoid a "slide-in" glitch
+  smoothPos.copy(anchor.object3D.position);
+  smoothQuat.copy(anchor.object3D.quaternion);
 
-  // Smooth fade in
+  plane.setAttribute("animation__fade",
+    "property: opacity; to: 1; dur: 400; easing: easeOutQuad");
+  plane.setAttribute("animation__scale",
+    "property: scale; to: 1 1 1; dur: 400; easing: easeOutBack");
+});
+
+// ─── Target lost ───────────────────────────────────────────────────────────
+anchor.addEventListener("targetLost", () => {
+  // Grace period: if target reappears quickly, don't flicker
+  lostTimer = setTimeout(() => {
+    visible = false;
+    video.pause();
+
+    plane.setAttribute("animation__fade",
+      "property: opacity; to: 0; dur: 300; easing: easeInQuad");
+    plane.setAttribute("animation__scale",
+      "property: scale; to: 0.8 0.8 0.8; dur: 300; easing: easeInQuad");
+
+    lostTimer = null;
+  }, GRACE_MS);
+});
+
+// ─── Per-frame smoothing ────────────────────────────────────────────────────
+function smoothTracking() {
+  if (visible) {
+    const obj = anchor.object3D;
+
+    // --- Position with deadzone ---
+    const dx = obj.position.x - smoothPos.x;
+    const dy = obj.position.y - smoothPos.y;
+    const dz = obj.position.z - smoothPos.z;
+    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+    if (dist > DEADZONE) {
+      smoothPos.x += dx * POS_LERP;
+      smoothPos.y += dy * POS_LERP;
+      smoothPos.z += dz * POS_LERP;
+    }
+
+    // --- Rotation SLERP ---
+    smoothQuat2.copy(obj.quaternion);
+    smoothQuat.slerp(smoothQuat2, ROT_SLERP);
+
+    // Apply to container (sits inside anchor, offsets cancel to give world-smooth pose)
+    container.object3D.position.copy(smoothPos);
+    container.object3D.quaternion.copy(smoothQuat);
+  }
+
+  requestAnimationFrame(smoothTracking);
+}
+
+smoothTracking();
+</script>
+
+</body>
+</html>  // Smooth fade in
   plane.setAttribute("animation__fade", 
     "property: opacity; to: 1; dur: 400; easing: easeOutQuad");
 
